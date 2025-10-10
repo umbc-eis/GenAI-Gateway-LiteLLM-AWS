@@ -64,30 +64,35 @@ locals {
     for s in aws_subnet.public : s.id
   ])
 
-  existing_public_subnet_ids = [
+  all_existing_public_subnet_ids = [
     for subnet_id, rt in data.aws_route_table.subnet_route_tables : subnet_id
     if length([
       for route in rt.routes : route
-      if route.gateway_id != null && 
-         can(regex("^igw-", route.gateway_id)) && 
+      if route.gateway_id != null &&
+         can(regex("^igw-", route.gateway_id)) &&
          route.cidr_block == "0.0.0.0/0"
     ]) > 0
   ]
 
-  existing_private_subnet_ids = [
+  all_existing_private_subnet_ids = [
     for subnet_id, rt in data.aws_route_table.private_subnet_route_tables : subnet_id
     if length([
       for route in rt.routes : route
-      if route.gateway_id != null && 
-        can(regex("^igw-", route.gateway_id)) && 
+      if route.gateway_id != null &&
+        can(regex("^igw-", route.gateway_id)) &&
         route.cidr_block == "0.0.0.0/0"
     ]) == 0
   ]
 
+  existing_public_subnet_ids = slice(local.all_existing_public_subnet_ids, 0, min(2, length(local.all_existing_public_subnet_ids)))
+
+  existing_private_subnet_ids = slice(local.all_existing_private_subnet_ids, 0, min(2, length(local.all_existing_private_subnet_ids)))
+
   # The final chosen subnets for "private_with_egress" or "private_isolated" usage.
   # If existing VPC => data subnets (you must do your own filtering in real usage).
   # If new VPC => the private subnets we created.
-  chosen_subnet_ids = local.creating_new_vpc ? local.new_private_subnet_ids : local.existing_private_subnet_ids
+  chosen_subnet_ids = length(var.private_subnet_ids) > 0 ? var.private_subnet_ids : (local.creating_new_vpc ? local.new_private_subnet_ids : local.existing_private_subnet_ids)
+  chosen_public_subnet_ids = length(var.public_subnet_ids) > 0 ? var.public_subnet_ids : (local.creating_new_vpc ? local.new_public_subnet_ids : local.existing_public_subnet_ids)
 }
 
 locals {

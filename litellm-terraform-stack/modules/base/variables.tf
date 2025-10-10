@@ -80,3 +80,15 @@ variable "use_route53" {
   type        = bool
   default     = false
 }
+
+variable "public_subnet_ids" {
+  description = "A list of two public subnet IDs to use. If empty, subnets will be discovered or created."
+  type        = list(string)
+  default     = []
+}
+
+variable "private_subnet_ids" {
+  description = "A list of two private subnet IDs to use. If empty, subnets will be discovered or created."
+  type        = list(string)
+  default     = []
+}

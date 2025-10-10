@@ -373,6 +373,8 @@ export TF_VAR_langfuse_secret_key=$LANGFUSE_SECRET_KEY
 export TF_VAR_use_route53=$USE_ROUTE53
 export TF_VAR_use_cloudfront=$USE_CLOUDFRONT
 export TF_VAR_cloudfront_price_class=$CLOUDFRONT_PRICE_CLASS
+export TF_VAR_public_subnet_ids=$([ -n "$PUBLIC_SUBNET_IDS" ] && echo "[\"$(echo "$PUBLIC_SUBNET_IDS" | sed 's/,/\",\"/g')\"]" || echo "[]")
+export TF_VAR_private_subnet_ids=$([ -n "$PRIVATE_SUBNET_IDS" ] && echo "[\"$(echo "$PRIVATE_SUBNET_IDS" | sed 's/,/\",\"/g')\"]" || echo "[]")
 
 # Display CloudFront and Route53 configuration
 echo "USE_ROUTE53: $USE_ROUTE53"

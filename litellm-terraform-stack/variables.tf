@@ -381,3 +381,15 @@ variable "langfuse_host" {
   description = "the hostname of your langfuse deployment. Optional, defaults to https://cloud.langfuse.com"
   default = "https://cloud.langfuse.com"
 }
+
+variable "public_subnet_ids" {
+  description = "A list of two public subnet IDs to use. If empty, subnets will be discovered or created."
+  type        = list(string)
+  default     = []
+}
+
+variable "private_subnet_ids" {
+  description = "A list of two private subnet IDs to use. If empty, subnets will be discovered or created."
+  type        = list(string)
+  default     = []
+}

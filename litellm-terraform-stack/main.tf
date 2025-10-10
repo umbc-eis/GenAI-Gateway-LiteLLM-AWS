@@ -33,6 +33,8 @@ module "base" {
   redis_node_type = var.redis_node_type
   redis_num_cache_clusters = var.redis_num_cache_clusters
   use_route53 = var.use_route53
+  public_subnet_ids = var.public_subnet_ids
+  private_subnet_ids = var.private_subnet_ids
 }
 
 module "ecs_cluster" {
@@ -106,6 +108,7 @@ module "ecs_cluster" {
 }
 
 data "aws_subnets" "private" {
+  count = length(var.private_subnet_ids) == 0 ? 1 : 0
   filter {
     name   = "vpc-id"
     values = [module.base.VpcId]
@@ -117,6 +120,7 @@ data "aws_subnets" "private" {
 }
 
 data "aws_subnets" "public" {
+  count = length(var.public_subnet_ids) == 0 ? 1 : 0
   filter {
     name   = "vpc-id"
     values = [module.base.VpcId]
@@ -131,8 +135,8 @@ module "eks_cluster" {
   source = "./modules/eks"
   count  = local.platform == "EKS" ? 1 : 0
   name = var.name
-  private_subnet_ids = data.aws_subnets.private.ids
-  public_subnet_ids  = data.aws_subnets.public.ids
+  private_subnet_ids = length(var.private_subnet_ids) > 0 ? var.private_subnet_ids : data.aws_subnets.private[0].ids
+  public_subnet_ids  = length(var.public_subnet_ids) > 0 ? var.public_subnet_ids : data.aws_subnets.public[0].ids
   config_bucket_arn = module.base.ConfigBucketArn
   existing_cluster_name = var.existing_cluster_name
   cluster_version = var.cluster_version
