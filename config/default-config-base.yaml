@@ -36,9 +36,9 @@ router_settings:
 
 environment_variables:
   STORE_MODEL_IN_DB: 'True'
-  LITELLM_LOG: "DEBUG"
 
 litellm_settings:
+  request_timeout: 50  # Timeout in seconds for requests to model providers
   cache: True
   debug: True
   detailed_debug: True

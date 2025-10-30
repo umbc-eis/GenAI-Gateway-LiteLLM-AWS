@@ -38,7 +38,7 @@ resource "aws_ecs_task_definition" "litellm" {
       }
     },
     "environment": [
-      { "name": "LITELLM_LOG", "value": "DEBUG" },
+      { "name": "LITELLM_LOG", "value": "${var.litellm_log_level}" },
       { "name": "LITELLM_CONFIG_BUCKET_NAME", "value": "${var.config_bucket_name}" },
       { "name": "LITELLM_CONFIG_BUCKET_OBJECT_KEY", "value": "config.yaml" },
       { "name": "UI_USERNAME", "value": "admin" },

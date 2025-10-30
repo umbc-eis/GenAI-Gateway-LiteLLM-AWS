@@ -315,6 +315,7 @@ export TF_VAR_name=$MAIN_STACK_NAME
 export TF_VAR_vpc_id=$EXISTING_VPC_ID
 export TF_VAR_log_bucket_arn=$LOG_BUCKET_ARN
 export TF_VAR_litellm_version=$LITELLM_VERSION
+export TF_VAR_litellm_log_level=$LITELLM_LOG_LEVEL
 export TF_VAR_openai_api_key=$OPENAI_API_KEY
 export TF_VAR_azure_openai_api_key=$AZURE_OPENAI_API_KEY
 export TF_VAR_azure_api_key=$AZURE_API_KEY

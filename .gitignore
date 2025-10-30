@@ -2,12 +2,28 @@
 config/config.yaml
 config/local-config.yaml
 
+# IDE and Editor files
 .*.sw?
 **/.DS_Store
 .idea/
-.aws-sam/
+.vscode/
 .vscode/settings.json
 **/.vim/
+*.sublime-project
+*.sublime-workspace
+.fleet/
+.cursor/
+*.code-workspace
+
+# AI Assistant generated files
+.gemini-generated/
+.geminiignore
+.aider*
+.claude/
+.copilot/
+
+# AWS and Deployment
+.aws-sam/
 
 *.js
 !jest.config.js

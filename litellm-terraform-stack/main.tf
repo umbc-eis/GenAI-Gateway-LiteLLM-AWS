@@ -49,6 +49,7 @@ module "ecs_cluster" {
   ecr_litellm_repository_url = module.base.LiteLLMRepositoryUrl
   ecr_middleware_repository_url = module.base.MiddlewareRepositoryUrl
   litellm_version = var.litellm_version
+  litellm_log_level = var.litellm_log_level
   config_bucket_name = module.base.ConfigBucketName
   use_route53 = var.use_route53
   use_cloudfront = var.use_cloudfront

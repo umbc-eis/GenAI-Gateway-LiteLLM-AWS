@@ -36,6 +36,16 @@ variable "litellm_version" {
   type        = string
 }
 
+variable "litellm_log_level" {
+  description = "Log level for LiteLLM (DEBUG, INFO, WARNING, ERROR)"
+  type        = string
+  default     = "DEBUG"
+  validation {
+    condition     = contains(["DEBUG", "INFO", "WARNING", "ERROR"], var.litellm_log_level)
+    error_message = "Log level must be one of: DEBUG, INFO, WARNING, ERROR."
+  }
+}
+
 variable "openai_api_key" {
   description = "OpenAI API key"
   type        = string
