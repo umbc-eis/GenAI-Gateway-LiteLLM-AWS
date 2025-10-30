@@ -58,7 +58,7 @@ def send_message(
         dict: API response
     """
 
-    # model_id = "arn:aws:bedrock:us-west-2:235614385815:prompt/6LE1KDKISG:2"
+    # model_id = "arn:aws:bedrock:us-west-2:123456789012:prompt/EXAMPLE123:1"
     body = {}
     try:
         if session_id:
