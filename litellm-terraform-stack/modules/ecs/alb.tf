@@ -9,7 +9,7 @@ resource "aws_lb" "this" {
   # You need to supply a security group for the ALB itself:
   security_groups    = [aws_security_group.alb_sg.id]
   internal           = var.public_load_balancer ? false : true
-  idle_timeout       = 60
+  idle_timeout       = 160
   drop_invalid_header_fields = true
   access_logs {
     bucket  = aws_s3_bucket.access_log_bucket.bucket

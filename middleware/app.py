@@ -525,7 +525,7 @@ async def process_chat_request(
                 "Authorization": f"Bearer {api_key}",
                 "Content-Type": "application/json",
             },
-            timeout=55.0,
+            timeout=155.0,
         )
 
         if response.status_code != 200:
