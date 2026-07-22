@@ -1,6 +1,7 @@
 .env
 config/config.yaml
 config/local-config.yaml
+config/config.yaml*.bak*
 
 # IDE and Editor files
 .*.sw?

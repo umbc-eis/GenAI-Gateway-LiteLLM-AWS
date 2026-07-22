@@ -105,7 +105,13 @@ module "ecs_cluster" {
   langfuse_secret_key = var.langfuse_secret_key
   langfuse_host = var.langfuse_host
 
-  depends_on = [ module.base ]
+  # NOTE: no module-level depends_on here. This module already references ~15
+  # module.base outputs, which gives Terraform correct fine-grained ordering.
+  # A blanket `depends_on = [module.base]` made ANY base change (e.g. a WAF
+  # rule tweak) mark all of this module's data sources as "read during apply",
+  # turning data.aws_region.current and data.aws_route53_zone unknown at plan
+  # time and forcing spurious replacement of the ECS task definition and the
+  # Route53 alias record (brief DNS/ECS downtime on every apply).
 }
 
 data "aws_subnets" "private" {

@@ -61,6 +61,25 @@ resource "aws_wafv2_web_acl" "litellm_waf" {
             count {}
           }
         }
+
+        # MCP OAuth clients (Claude Code, Cursor, etc.) register loopback
+        # redirect URIs like http://localhost:<port>/callback. The GenericRFI
+        # rules flag any parameter containing a ://<ip-or-localhost> URL as a
+        # remote-file-inclusion/SSRF attempt and block the OAuth authorize /
+        # register calls with a 403. Count instead of block so the flow works.
+        rule_action_override {
+          name = "GenericRFI_QUERYARGUMENTS"
+          action_to_use {
+            count {}
+          }
+        }
+
+        rule_action_override {
+          name = "GenericRFI_BODY"
+          action_to_use {
+            count {}
+          }
+        }
       }
     }
 
