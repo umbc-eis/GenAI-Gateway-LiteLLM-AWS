@@ -39,7 +39,7 @@ variable "litellm_version" {
 variable "litellm_log_level" {
   description = "Log level for LiteLLM (DEBUG, INFO, WARNING, ERROR)"
   type        = string
-  default     = "DEBUG"
+  default     = "WARNING"
   validation {
     condition     = contains(["DEBUG", "INFO", "WARNING", "ERROR"], var.litellm_log_level)
     error_message = "Log level must be one of: DEBUG, INFO, WARNING, ERROR."
@@ -281,6 +281,12 @@ variable "cpu_target_utilization_percent" {
 variable "memory_target_utilization_percent" {
   description = "Memory target utilization percent for autoscale"
   type = number
+}
+
+variable "alb_requests_per_target" {
+  description = "Target average ALB requests per ECS task per minute for autoscaling (ALBRequestCountPerTarget). Tune from the ALB RequestCount metric."
+  type    = number
+  default = 300
 }
 
 variable "vcpus" {

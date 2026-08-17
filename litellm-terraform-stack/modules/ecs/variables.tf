@@ -321,6 +321,12 @@ variable "memory_target_utilization_percent" {
   type = number
 }
 
+variable "alb_requests_per_target" {
+  description = "Target average ALB requests per ECS task per minute for autoscaling (ALBRequestCountPerTarget)."
+  type    = number
+  default = 300
+}
+
 variable "private_subnets" {
   description = "List of private subnet IDs"
   type        = list(string)

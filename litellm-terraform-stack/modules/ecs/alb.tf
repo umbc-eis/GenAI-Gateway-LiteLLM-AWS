@@ -91,6 +91,11 @@ resource "aws_lb_target_group" "tg_4000" {
   vpc_id      = var.vpc_id
   target_type = "ip"
 
+  # LLM request durations vary widely (sub-second to 150s). Least-outstanding-requests
+  # routes to the least-busy task instead of blindly round-robining onto a task that is
+  # already mid-generation, which cuts tail latency.
+  load_balancing_algorithm_type = "least_outstanding_requests"
+
   health_check {
     path                = "/health/liveliness"
     port                = "4000"
@@ -109,6 +114,9 @@ resource "aws_lb_target_group" "tg_3000" {
   protocol    = "HTTP"
   vpc_id      = var.vpc_id
   target_type = "ip"
+
+  # See tg_4000: route to the least-busy middleware task rather than round-robin.
+  load_balancing_algorithm_type = "least_outstanding_requests"
 
   health_check {
     path                = "/bedrock/health/liveliness"
@@ -824,6 +832,29 @@ resource "aws_appautoscaling_policy" "memory_policy" {
       predefined_metric_type = "ECSServiceAverageMemoryUtilization"
     }
     scale_in_cooldown  = 60
+    scale_out_cooldown = 60
+  }
+}
+
+# Request-count scaling: CPU/memory stay low even when the proxy is busy (requests are
+# I/O-bound on upstream model providers), so CPU/memory target tracking rarely fires.
+# ALBRequestCountPerTarget scales on actual request load through the middleware target
+# group (the chat hot path). target_value is average completed requests per target per
+# minute; tune it from the ALB RequestCount metric / access logs.
+resource "aws_appautoscaling_policy" "alb_requests_policy" {
+  name               = "${var.name}-alb-request-scaling"
+  policy_type        = "TargetTrackingScaling"
+  resource_id        = aws_appautoscaling_target.ecs_service_target.resource_id
+  scalable_dimension = aws_appautoscaling_target.ecs_service_target.scalable_dimension
+  service_namespace  = aws_appautoscaling_target.ecs_service_target.service_namespace
+
+  target_tracking_scaling_policy_configuration {
+    target_value = var.alb_requests_per_target
+    predefined_metric_specification {
+      predefined_metric_type = "ALBRequestCountPerTarget"
+      resource_label         = "${aws_lb.this.arn_suffix}/${aws_lb_target_group.tg_3000.arn_suffix}"
+    }
+    scale_in_cooldown  = 120
     scale_out_cooldown = 60
   }
 }

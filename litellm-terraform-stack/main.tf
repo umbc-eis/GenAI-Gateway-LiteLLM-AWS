@@ -97,6 +97,7 @@ module "ecs_cluster" {
   vcpus = var.vcpus
   cpu_target_utilization_percent = var.cpu_target_utilization_percent
   memory_target_utilization_percent = var.memory_target_utilization_percent
+  alb_requests_per_target = var.alb_requests_per_target
   private_subnets = module.base.private_subnet_ids
   public_subnets = module.base.public_subnet_ids
   disable_swagger_page = var.disable_swagger_page
