@@ -95,8 +95,11 @@ data "aws_iam_policy_document" "task_role_policy_doc" {
   }
 
   statement {
-    sid       = "BedrockAccess"
-    actions   = ["bedrock:*"]
+    sid = "BedrockAccess"
+    # bedrock-mantle = "Amazon Bedrock Powered by AWS Mantle", the IAM namespace
+    # for OpenAI-SDK-style Bedrock model invocations. LiteLLM/middleware require it,
+    # so it must stay alongside bedrock:*.
+    actions   = ["bedrock:*", "bedrock-mantle:*"]
     resources = ["*"]
   }
 
