@@ -59,7 +59,7 @@ resource "aws_ecs_task_definition" "fake_server_task_def" {
         logDriver = "awslogs"
         options = {
           "awslogs-group"         = aws_cloudwatch_log_group.fake_server_logs.name
-          "awslogs-region"        = data.aws_region.current.name
+          "awslogs-region"        = data.aws_region.current.region
           "awslogs-stream-prefix" = "FakeServer"
         }
       }

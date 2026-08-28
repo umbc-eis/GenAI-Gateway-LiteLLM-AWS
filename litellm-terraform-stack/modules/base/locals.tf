@@ -119,7 +119,7 @@ locals {
 
 data "aws_vpc_endpoint_service" "bedrock_agent" {
   # This service name must match exactly what you used in the resource
-  service_name = "com.amazonaws.${data.aws_region.current.name}.bedrock-agent"
+  service_name = "com.amazonaws.${data.aws_region.current.region}.bedrock-agent"
 }
 
 data "aws_subnet" "chosen_subnets" {

@@ -33,7 +33,7 @@ resource "aws_ecs_task_definition" "litellm" {
       "logDriver": "awslogs",
       "options": {
         "awslogs-group": "/ecs/${var.name}-litellm",
-        "awslogs-region": "${data.aws_region.current.name}",
+        "awslogs-region": "${data.aws_region.current.region}",
         "awslogs-stream-prefix": "LiteLLM"
       }
     },
@@ -181,7 +181,7 @@ resource "aws_ecs_task_definition" "litellm" {
       "logDriver": "awslogs",
       "options": {
         "awslogs-group": "/ecs/${var.name}-middleware",
-        "awslogs-region": "${data.aws_region.current.name}",
+        "awslogs-region": "${data.aws_region.current.region}",
         "awslogs-stream-prefix": "Middleware"
       }
     },
@@ -249,6 +249,14 @@ resource "aws_ecs_service" "litellm_service" {
   deployment_controller {
     type = "ECS"
   }
+
+  # desired_count is managed by aws_appautoscaling_target (ecs:service:DesiredCount).
+  # Without this, every `terraform apply` resets the service back to
+  # var.desired_capacity, overriding whatever the autoscaler has chosen.
+  lifecycle {
+    ignore_changes = [desired_count]
+  }
+
   depends_on = [
     aws_lb_listener_rule.bedrock_models,
     aws_lb_listener_rule.openai_completions,

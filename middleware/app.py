@@ -464,7 +464,9 @@ async def process_chat_request(
     if auth_header and auth_header.startswith("Bearer "):
         api_key = auth_header[len("Bearer ") :]
     else:
-        print(f"Missing or invalid Authorization header: {auth_header}")
+        # Never log auth_header itself: a caller who omits the "Bearer " prefix
+        # but sends a real key would have that key written to CloudWatch.
+        print("Missing or invalid Authorization header")
         raise HTTPException(
             status_code=401, detail={"error": "Missing or invalid Authorization header"}
         )
@@ -1161,12 +1163,11 @@ async def forward_user_new(request: Request):
             ) from e
 
         headers, claims, signing_input, signature = JWTUtils.parse_token(token)
-        print(
-            f"headers: {headers} claims: {claims} signing_input: {signing_input} signature: {signature}"
-        )
+        # Do not log headers/claims/signing_input/signature. signing_input is
+        # "<header>.<payload>", so signing_input + signature reconstitutes the
+        # complete bearer token, and claims carry user PII.
 
         sub = claims.get("sub")
-        print(f"sub: {sub}")
         if not sub:
             raise HTTPException(
                 status_code=403, detail={"error": "No sub claim found in the token"}
@@ -1180,13 +1181,13 @@ async def forward_user_new(request: Request):
         body_json["user_email"] = sub
         body_json["user_id"] = sub
         body_json["user_role"] = "internal_user"
-        print(f"body_json: {body_json}")
         request_body = json.dumps(body_json).encode()
         final_headers["content-length"] = str(len(request_body))
         final_headers["authorization"] = f"Bearer {MASTER_KEY}"
 
-    print(f"final_headers: {final_headers}")
-    print(f"request_body: {request_body}")
+    # Neither final_headers nor request_body is safe to log: final_headers holds
+    # either the caller's own LiteLLM key (sk- path) or MASTER_KEY (JWT path),
+    # and request_body holds the user's email/identity.
     async with httpx.AsyncClient() as client:
         response = await client.post(
             f"{LITELLM_ENDPOINT}/user/new",

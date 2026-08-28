@@ -354,6 +354,7 @@ export TF_VAR_min_capacity=$MIN_CAPACITY
 export TF_VAR_max_capacity=$MAX_CAPACITY
 export TF_VAR_cpu_target_utilization_percent=$ECS_CPU_TARGET_UTILIZATION_PERCENTAGE
 export TF_VAR_memory_target_utilization_percent=$ECS_MEMORY_TARGET_UTILIZATION_PERCENTAGE
+export TF_VAR_alb_requests_per_target=${ECS_ALB_REQUESTS_PER_TARGET:-300}
 export TF_VAR_vcpus=$ECS_VCPUS
 export TF_VAR_install_add_ons_in_existing_eks_cluster=$INSTALL_ADD_ONS_IN_EXISTING_EKS_CLUSTER
 export TF_VAR_arm_instance_type=$EKS_ARM_INSTANCE_TYPE

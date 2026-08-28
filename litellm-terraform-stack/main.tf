@@ -97,6 +97,7 @@ module "ecs_cluster" {
   vcpus = var.vcpus
   cpu_target_utilization_percent = var.cpu_target_utilization_percent
   memory_target_utilization_percent = var.memory_target_utilization_percent
+  alb_requests_per_target = var.alb_requests_per_target
   private_subnets = module.base.private_subnet_ids
   public_subnets = module.base.public_subnet_ids
   disable_swagger_page = var.disable_swagger_page
@@ -105,7 +106,13 @@ module "ecs_cluster" {
   langfuse_secret_key = var.langfuse_secret_key
   langfuse_host = var.langfuse_host
 
-  depends_on = [ module.base ]
+  # NOTE: no module-level depends_on here. This module already references ~15
+  # module.base outputs, which gives Terraform correct fine-grained ordering.
+  # A blanket `depends_on = [module.base]` made ANY base change (e.g. a WAF
+  # rule tweak) mark all of this module's data sources as "read during apply",
+  # turning data.aws_region.current and data.aws_route53_zone unknown at plan
+  # time and forcing spurious replacement of the ECS task definition and the
+  # Route53 alias record (brief DNS/ECS downtime on every apply).
 }
 
 data "aws_subnets" "private" {

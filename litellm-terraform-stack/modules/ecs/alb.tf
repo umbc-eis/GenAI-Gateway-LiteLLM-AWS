@@ -91,6 +91,11 @@ resource "aws_lb_target_group" "tg_4000" {
   vpc_id      = var.vpc_id
   target_type = "ip"
 
+  # LLM request durations vary widely (sub-second to 150s). Least-outstanding-requests
+  # routes to the least-busy task instead of blindly round-robining onto a task that is
+  # already mid-generation, which cuts tail latency.
+  load_balancing_algorithm_type = "least_outstanding_requests"
+
   health_check {
     path                = "/health/liveliness"
     port                = "4000"
@@ -109,6 +114,9 @@ resource "aws_lb_target_group" "tg_3000" {
   protocol    = "HTTP"
   vpc_id      = var.vpc_id
   target_type = "ip"
+
+  # See tg_4000: route to the least-busy middleware task rather than round-robin.
+  load_balancing_algorithm_type = "least_outstanding_requests"
 
   health_check {
     path                = "/bedrock/health/liveliness"
@@ -234,13 +242,18 @@ resource "aws_lb_listener_rule" "bedrock_models" {
 }
 
 # OpenAICompletions
+# Routed straight to LiteLLM (tg_4000), not the middleware. The middleware adds
+# nothing to OpenAI-native chat traffic -- history/session stitching is opt-in via
+# enable_history/session_id in the body, and Bedrock clients use /bedrock/model/*.
+# It did, however, re-serialize every SSE chunk and crash on usage-only chunks
+# (empty "choices" list), aborting the response mid-body. See git log.
 resource "aws_lb_listener_rule" "openai_completions" {
   listener_arn = aws_lb_listener.https.arn
   priority     = 15
 
   action {
     type             = "forward"
-    target_group_arn = aws_lb_target_group.tg_3000.arn
+    target_group_arn = aws_lb_target_group.tg_4000.arn
   }
 
   condition {
@@ -257,13 +270,14 @@ resource "aws_lb_listener_rule" "openai_completions" {
 }
 
 # ChatCompletions
+# Routed straight to LiteLLM (tg_4000) -- see openai_completions above.
 resource "aws_lb_listener_rule" "chat_completions" {
   listener_arn = aws_lb_listener.https.arn
   priority     = 14
 
   action {
     type             = "forward"
-    target_group_arn = aws_lb_target_group.tg_3000.arn
+    target_group_arn = aws_lb_target_group.tg_4000.arn
   }
 
   condition {
@@ -479,6 +493,7 @@ resource "aws_lb_listener_rule" "bedrock_models_http" {
 }
 
 # OpenAICompletions for HTTP
+# Routed straight to LiteLLM (tg_4000) -- see openai_completions above.
 resource "aws_lb_listener_rule" "openai_completions_http" {
   count        = var.use_cloudfront ? 1 : 0
   listener_arn = aws_lb_listener.http.arn
@@ -486,7 +501,7 @@ resource "aws_lb_listener_rule" "openai_completions_http" {
 
   action {
     type             = "forward"
-    target_group_arn = aws_lb_target_group.tg_3000.arn
+    target_group_arn = aws_lb_target_group.tg_4000.arn
   }
 
   condition {
@@ -511,6 +526,7 @@ resource "aws_lb_listener_rule" "openai_completions_http" {
 }
 
 # ChatCompletions for HTTP
+# Routed straight to LiteLLM (tg_4000) -- see openai_completions above.
 resource "aws_lb_listener_rule" "chat_completions_http" {
   count        = var.use_cloudfront ? 1 : 0
   listener_arn = aws_lb_listener.http.arn
@@ -518,7 +534,7 @@ resource "aws_lb_listener_rule" "chat_completions_http" {
 
   action {
     type             = "forward"
-    target_group_arn = aws_lb_target_group.tg_3000.arn
+    target_group_arn = aws_lb_target_group.tg_4000.arn
   }
 
   condition {
@@ -824,6 +840,29 @@ resource "aws_appautoscaling_policy" "memory_policy" {
       predefined_metric_type = "ECSServiceAverageMemoryUtilization"
     }
     scale_in_cooldown  = 60
+    scale_out_cooldown = 60
+  }
+}
+
+# Request-count scaling: CPU/memory stay low even when the proxy is busy (requests are
+# I/O-bound on upstream model providers), so CPU/memory target tracking rarely fires.
+# ALBRequestCountPerTarget scales on actual request load through the middleware target
+# group (the chat hot path). target_value is average completed requests per target per
+# minute; tune it from the ALB RequestCount metric / access logs.
+resource "aws_appautoscaling_policy" "alb_requests_policy" {
+  name               = "${var.name}-alb-request-scaling"
+  policy_type        = "TargetTrackingScaling"
+  resource_id        = aws_appautoscaling_target.ecs_service_target.resource_id
+  scalable_dimension = aws_appautoscaling_target.ecs_service_target.scalable_dimension
+  service_namespace  = aws_appautoscaling_target.ecs_service_target.service_namespace
+
+  target_tracking_scaling_policy_configuration {
+    target_value = var.alb_requests_per_target
+    predefined_metric_specification {
+      predefined_metric_type = "ALBRequestCountPerTarget"
+      resource_label         = "${aws_lb.this.arn_suffix}/${aws_lb_target_group.tg_3000.arn_suffix}"
+    }
+    scale_in_cooldown  = 120
     scale_out_cooldown = 60
   }
 }

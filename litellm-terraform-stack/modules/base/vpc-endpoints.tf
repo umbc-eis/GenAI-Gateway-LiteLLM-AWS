@@ -29,7 +29,7 @@ resource "aws_security_group" "vpc_endpoints_sg" {
 resource "aws_vpc_endpoint" "s3_gateway" {
   count             = local.create_endpoints ? 1 : 0
   vpc_id            = local.final_vpc_id
-  service_name      = "com.amazonaws.${data.aws_region.current.name}.s3"
+  service_name      = "com.amazonaws.${data.aws_region.current.region}.s3"
   vpc_endpoint_type = "Gateway"
   route_table_ids   = local.s3_gateway_route_table_ids
 }
@@ -43,7 +43,7 @@ resource "aws_vpc_endpoint" "s3_gateway" {
 resource "aws_vpc_endpoint" "secretsmanager" {
   count                    = local.create_endpoints ? 1 : 0
   vpc_id                   = local.final_vpc_id
-  service_name             = "com.amazonaws.${data.aws_region.current.name}.secretsmanager"
+  service_name             = "com.amazonaws.${data.aws_region.current.region}.secretsmanager"
   vpc_endpoint_type        = "Interface"
   security_group_ids       = [aws_security_group.vpc_endpoints_sg[0].id]
   subnet_ids               = local.chosen_subnet_ids
@@ -54,7 +54,7 @@ resource "aws_vpc_endpoint" "secretsmanager" {
 resource "aws_vpc_endpoint" "ecr" {
   count                    = local.create_endpoints ? 1 : 0
   vpc_id                   = local.final_vpc_id
-  service_name             = "com.amazonaws.${data.aws_region.current.name}.ecr.api"
+  service_name             = "com.amazonaws.${data.aws_region.current.region}.ecr.api"
   vpc_endpoint_type        = "Interface"
   security_group_ids       = [aws_security_group.vpc_endpoints_sg[0].id]
   subnet_ids               = local.chosen_subnet_ids
@@ -64,7 +64,7 @@ resource "aws_vpc_endpoint" "ecr" {
 resource "aws_vpc_endpoint" "ecr_docker" {
   count                    = local.create_endpoints ? 1 : 0
   vpc_id                   = local.final_vpc_id
-  service_name             = "com.amazonaws.${data.aws_region.current.name}.ecr.dkr"
+  service_name             = "com.amazonaws.${data.aws_region.current.region}.ecr.dkr"
   vpc_endpoint_type        = "Interface"
   security_group_ids       = [aws_security_group.vpc_endpoints_sg[0].id]
   subnet_ids               = local.chosen_subnet_ids
@@ -75,7 +75,7 @@ resource "aws_vpc_endpoint" "ecr_docker" {
 resource "aws_vpc_endpoint" "cloudwatch_logs" {
   count                    = local.create_endpoints ? 1 : 0
   vpc_id                   = local.final_vpc_id
-  service_name             = "com.amazonaws.${data.aws_region.current.name}.logs"
+  service_name             = "com.amazonaws.${data.aws_region.current.region}.logs"
   vpc_endpoint_type        = "Interface"
   security_group_ids       = [aws_security_group.vpc_endpoints_sg[0].id]
   subnet_ids               = local.chosen_subnet_ids
@@ -86,7 +86,7 @@ resource "aws_vpc_endpoint" "cloudwatch_logs" {
 resource "aws_vpc_endpoint" "sts" {
   count                    = local.create_endpoints ? 1 : 0
   vpc_id                   = local.final_vpc_id
-  service_name             = "com.amazonaws.${data.aws_region.current.name}.sts"
+  service_name             = "com.amazonaws.${data.aws_region.current.region}.sts"
   vpc_endpoint_type        = "Interface"
   security_group_ids       = [aws_security_group.vpc_endpoints_sg[0].id]
   subnet_ids               = local.chosen_subnet_ids
@@ -97,7 +97,7 @@ resource "aws_vpc_endpoint" "sts" {
 resource "aws_vpc_endpoint" "sagemaker_runtime" {
   count                    = local.create_endpoints ? 1 : 0
   vpc_id                   = local.final_vpc_id
-  service_name             = "com.amazonaws.${data.aws_region.current.name}.sagemaker.runtime"
+  service_name             = "com.amazonaws.${data.aws_region.current.region}.sagemaker.runtime"
   vpc_endpoint_type        = "Interface"
   security_group_ids       = [aws_security_group.vpc_endpoints_sg[0].id]
   subnet_ids               = local.chosen_subnet_ids
@@ -108,7 +108,7 @@ resource "aws_vpc_endpoint" "sagemaker_runtime" {
 resource "aws_vpc_endpoint" "bedrock" {
   count                    = local.create_endpoints ? 1 : 0
   vpc_id                   = local.final_vpc_id
-  service_name             = "com.amazonaws.${data.aws_region.current.name}.bedrock"
+  service_name             = "com.amazonaws.${data.aws_region.current.region}.bedrock"
   vpc_endpoint_type        = "Interface"
   security_group_ids       = [aws_security_group.vpc_endpoints_sg[0].id]
   subnet_ids               = local.chosen_subnet_ids
@@ -118,7 +118,7 @@ resource "aws_vpc_endpoint" "bedrock" {
 resource "aws_vpc_endpoint" "bedrock_runtime" {
   count                    = local.create_endpoints ? 1 : 0
   vpc_id                   = local.final_vpc_id
-  service_name             = "com.amazonaws.${data.aws_region.current.name}.bedrock-runtime"
+  service_name             = "com.amazonaws.${data.aws_region.current.region}.bedrock-runtime"
   vpc_endpoint_type        = "Interface"
   security_group_ids       = [aws_security_group.vpc_endpoints_sg[0].id]
   subnet_ids               = local.chosen_subnet_ids
@@ -128,7 +128,7 @@ resource "aws_vpc_endpoint" "bedrock_runtime" {
 resource "aws_vpc_endpoint" "bedrock_agent" {
   count                    = local.create_endpoints ? 1 : 0
   vpc_id                   = local.final_vpc_id
-  service_name             = "com.amazonaws.${data.aws_region.current.name}.bedrock-agent"
+  service_name             = "com.amazonaws.${data.aws_region.current.region}.bedrock-agent"
   vpc_endpoint_type        = "Interface"
   security_group_ids       = [aws_security_group.vpc_endpoints_sg[0].id]
   //subnet_ids               = local.chosen_subnet_ids
@@ -141,7 +141,7 @@ resource "aws_vpc_endpoint" "bedrock_agent" {
 resource "aws_vpc_endpoint" "eks" {
   count = local.create_endpoints && var.deployment_platform == "EKS" ? 1 : 0
   vpc_id                   = local.final_vpc_id
-  service_name             = "com.amazonaws.${data.aws_region.current.name}.eks"
+  service_name             = "com.amazonaws.${data.aws_region.current.region}.eks"
   vpc_endpoint_type        = "Interface"
   security_group_ids       = [aws_security_group.vpc_endpoints_sg[0].id]
   subnet_ids               = local.chosen_subnet_ids
@@ -151,7 +151,7 @@ resource "aws_vpc_endpoint" "eks" {
 resource "aws_vpc_endpoint" "ec2" {
   count = local.create_endpoints && var.deployment_platform == "EKS" ? 1 : 0
   vpc_id                   = local.final_vpc_id
-  service_name             = "com.amazonaws.${data.aws_region.current.name}.ec2"
+  service_name             = "com.amazonaws.${data.aws_region.current.region}.ec2"
   vpc_endpoint_type        = "Interface"
   security_group_ids       = [aws_security_group.vpc_endpoints_sg[0].id]
   subnet_ids               = local.chosen_subnet_ids
@@ -161,7 +161,7 @@ resource "aws_vpc_endpoint" "ec2" {
 resource "aws_vpc_endpoint" "ec2_messages" {
   count = local.create_endpoints && var.deployment_platform == "EKS" ? 1 : 0
   vpc_id                   = local.final_vpc_id
-  service_name             = "com.amazonaws.${data.aws_region.current.name}.ec2messages"
+  service_name             = "com.amazonaws.${data.aws_region.current.region}.ec2messages"
   vpc_endpoint_type        = "Interface"
   security_group_ids       = [aws_security_group.vpc_endpoints_sg[0].id]
   subnet_ids               = local.chosen_subnet_ids
@@ -171,7 +171,7 @@ resource "aws_vpc_endpoint" "ec2_messages" {
 resource "aws_vpc_endpoint" "ssm" {
   count = local.create_endpoints && var.deployment_platform == "EKS" ? 1 : 0
   vpc_id                   = local.final_vpc_id
-  service_name             = "com.amazonaws.${data.aws_region.current.name}.ssm"
+  service_name             = "com.amazonaws.${data.aws_region.current.region}.ssm"
   vpc_endpoint_type        = "Interface"
   security_group_ids       = [aws_security_group.vpc_endpoints_sg[0].id]
   subnet_ids               = local.chosen_subnet_ids
@@ -181,7 +181,7 @@ resource "aws_vpc_endpoint" "ssm" {
 resource "aws_vpc_endpoint" "ssm_messages" {
   count = local.create_endpoints && var.deployment_platform == "EKS" ? 1 : 0
   vpc_id                   = local.final_vpc_id
-  service_name             = "com.amazonaws.${data.aws_region.current.name}.ssmmessages"
+  service_name             = "com.amazonaws.${data.aws_region.current.region}.ssmmessages"
   vpc_endpoint_type        = "Interface"
   security_group_ids       = [aws_security_group.vpc_endpoints_sg[0].id]
   subnet_ids               = local.chosen_subnet_ids
@@ -191,7 +191,7 @@ resource "aws_vpc_endpoint" "ssm_messages" {
 resource "aws_vpc_endpoint" "cloudwatch_monitoring" {
   count = local.create_endpoints && var.deployment_platform == "EKS" ? 1 : 0
   vpc_id                   = local.final_vpc_id
-  service_name             = "com.amazonaws.${data.aws_region.current.name}.monitoring"
+  service_name             = "com.amazonaws.${data.aws_region.current.region}.monitoring"
   vpc_endpoint_type        = "Interface"
   security_group_ids       = [aws_security_group.vpc_endpoints_sg[0].id]
   subnet_ids               = local.chosen_subnet_ids
@@ -201,7 +201,7 @@ resource "aws_vpc_endpoint" "cloudwatch_monitoring" {
 resource "aws_vpc_endpoint" "elb" {
   count = local.create_endpoints && var.deployment_platform == "EKS" ? 1 : 0
   vpc_id                   = local.final_vpc_id
-  service_name             = "com.amazonaws.${data.aws_region.current.name}.elasticloadbalancing"
+  service_name             = "com.amazonaws.${data.aws_region.current.region}.elasticloadbalancing"
   vpc_endpoint_type        = "Interface"
   security_group_ids       = [aws_security_group.vpc_endpoints_sg[0].id]
   subnet_ids               = local.chosen_subnet_ids
@@ -211,7 +211,7 @@ resource "aws_vpc_endpoint" "elb" {
 resource "aws_vpc_endpoint" "autoscaling" {
   count = local.create_endpoints && var.deployment_platform == "EKS" ? 1 : 0
   vpc_id                   = local.final_vpc_id
-  service_name             = "com.amazonaws.${data.aws_region.current.name}.autoscaling"
+  service_name             = "com.amazonaws.${data.aws_region.current.region}.autoscaling"
   vpc_endpoint_type        = "Interface"
   security_group_ids       = [aws_security_group.vpc_endpoints_sg[0].id]
   subnet_ids               = local.chosen_subnet_ids
@@ -221,7 +221,7 @@ resource "aws_vpc_endpoint" "autoscaling" {
 resource "aws_vpc_endpoint" "wafv2" {
   count = local.create_endpoints && var.deployment_platform == "EKS" ? 1 : 0
   vpc_id              = local.final_vpc_id
-  service_name        = "com.amazonaws.${data.aws_region.current.name}.wafv2"
+  service_name        = "com.amazonaws.${data.aws_region.current.region}.wafv2"
   vpc_endpoint_type   = "Interface"
   security_group_ids  = [aws_security_group.vpc_endpoints_sg[0].id]
   subnet_ids          = local.chosen_subnet_ids
