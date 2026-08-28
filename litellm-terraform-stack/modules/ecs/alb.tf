@@ -846,9 +846,21 @@ resource "aws_appautoscaling_policy" "memory_policy" {
 
 # Request-count scaling: CPU/memory stay low even when the proxy is busy (requests are
 # I/O-bound on upstream model providers), so CPU/memory target tracking rarely fires.
-# ALBRequestCountPerTarget scales on actual request load through the middleware target
-# group (the chat hot path). target_value is average completed requests per target per
-# minute; tune it from the ALB RequestCount metric / access logs.
+#
+# This must track whichever target group actually carries chat. /chat/completions and
+# /v1/chat/completions now forward straight to tg_4000 (LiteLLM), so the earlier
+# resource_label pointing at tg_3000 measured only /user/new, /key/generate and
+# /bedrock/* -- 397 requests in 24h against a target of 300 per target per minute -- and
+# the policy could never fire.
+#
+# target_value is average requests per target per minute. Measured on tg_4000 over 24h:
+# p95 6, p99 35, single-minute peak 493. 100 sits ~3x above p99, so it engages on a
+# sustained surge without flapping on short bursts.
+#
+# Caveat: tg_4000 is the /* catch-all, so it also absorbs Open WebUI /models polling and
+# internet scanner probes. This metric counts requests, not tokens or duration, so a
+# cheap poll weighs the same as a long completion. Re-tune from the ALB RequestCount
+# metric per target group rather than assuming this value still fits.
 resource "aws_appautoscaling_policy" "alb_requests_policy" {
   name               = "${var.name}-alb-request-scaling"
   policy_type        = "TargetTrackingScaling"
@@ -860,7 +872,7 @@ resource "aws_appautoscaling_policy" "alb_requests_policy" {
     target_value = var.alb_requests_per_target
     predefined_metric_specification {
       predefined_metric_type = "ALBRequestCountPerTarget"
-      resource_label         = "${aws_lb.this.arn_suffix}/${aws_lb_target_group.tg_3000.arn_suffix}"
+      resource_label         = "${aws_lb.this.arn_suffix}/${aws_lb_target_group.tg_4000.arn_suffix}"
     }
     scale_in_cooldown  = 120
     scale_out_cooldown = 60
