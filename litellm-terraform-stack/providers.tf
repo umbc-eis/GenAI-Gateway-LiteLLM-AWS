@@ -31,7 +31,7 @@ provider "aws" {
 }
 
 resource "aws_servicecatalogappregistry_application" "solution_application" {
-  name        = "${local.SolutionNameKeySatisfyingRestrictions}-${data.aws_region.current.name}-${data.aws_caller_identity.current.account_id}"
+  name        = "${local.SolutionNameKeySatisfyingRestrictions}-${data.aws_region.current.region}-${data.aws_caller_identity.current.account_id}"
   description = "Service Catalog application to track and manage all your resources for the solution ${local.common_labels.SolutionNameKey}"
 
   tags = {

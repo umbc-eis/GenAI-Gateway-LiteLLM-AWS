@@ -158,7 +158,7 @@ resource "kubernetes_deployment" "litellm" {
 
           env {
             name  = "AWS_REGION"
-            value = data.aws_region.current.name
+            value = data.aws_region.current.region
           }
 
           env {
@@ -236,12 +236,12 @@ resource "kubernetes_deployment" "litellm" {
 
           env {
             name  = "AWS_REGION"
-            value = data.aws_region.current.name
+            value = data.aws_region.current.region
           }
 
           env {
             name  = "AWS_DEFAULT_REGION"
-            value = data.aws_region.current.name
+            value = data.aws_region.current.region
           }
 
           env_from {
@@ -522,7 +522,7 @@ resource "helm_release" "aws_load_balancer_controller" {
     for_each = var.disable_outbound_network_access ? [1] : []
     content {
       name  = "image.repository"
-      value = "${data.aws_caller_identity.current.account_id}.dkr.ecr.${data.aws_region.current.name}.amazonaws.com/${var.eks_alb_controller_private_ecr_repository_name}/eks/aws-load-balancer-controller"
+      value = "${data.aws_caller_identity.current.account_id}.dkr.ecr.${data.aws_region.current.region}.amazonaws.com/${var.eks_alb_controller_private_ecr_repository_name}/eks/aws-load-balancer-controller"
     }
   }
 
