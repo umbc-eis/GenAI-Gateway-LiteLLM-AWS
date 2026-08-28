@@ -324,7 +324,7 @@ variable "memory_target_utilization_percent" {
 variable "alb_requests_per_target" {
   description = "Target average ALB requests per ECS task per minute for autoscaling (ALBRequestCountPerTarget)."
   type    = number
-  default = 300
+  default = 100
 }
 
 variable "private_subnets" {
