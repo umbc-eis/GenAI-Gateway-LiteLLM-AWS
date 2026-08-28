@@ -242,13 +242,18 @@ resource "aws_lb_listener_rule" "bedrock_models" {
 }
 
 # OpenAICompletions
+# Routed straight to LiteLLM (tg_4000), not the middleware. The middleware adds
+# nothing to OpenAI-native chat traffic -- history/session stitching is opt-in via
+# enable_history/session_id in the body, and Bedrock clients use /bedrock/model/*.
+# It did, however, re-serialize every SSE chunk and crash on usage-only chunks
+# (empty "choices" list), aborting the response mid-body. See git log.
 resource "aws_lb_listener_rule" "openai_completions" {
   listener_arn = aws_lb_listener.https.arn
   priority     = 15
 
   action {
     type             = "forward"
-    target_group_arn = aws_lb_target_group.tg_3000.arn
+    target_group_arn = aws_lb_target_group.tg_4000.arn
   }
 
   condition {
@@ -265,13 +270,14 @@ resource "aws_lb_listener_rule" "openai_completions" {
 }
 
 # ChatCompletions
+# Routed straight to LiteLLM (tg_4000) -- see openai_completions above.
 resource "aws_lb_listener_rule" "chat_completions" {
   listener_arn = aws_lb_listener.https.arn
   priority     = 14
 
   action {
     type             = "forward"
-    target_group_arn = aws_lb_target_group.tg_3000.arn
+    target_group_arn = aws_lb_target_group.tg_4000.arn
   }
 
   condition {
@@ -487,6 +493,7 @@ resource "aws_lb_listener_rule" "bedrock_models_http" {
 }
 
 # OpenAICompletions for HTTP
+# Routed straight to LiteLLM (tg_4000) -- see openai_completions above.
 resource "aws_lb_listener_rule" "openai_completions_http" {
   count        = var.use_cloudfront ? 1 : 0
   listener_arn = aws_lb_listener.http.arn
@@ -494,7 +501,7 @@ resource "aws_lb_listener_rule" "openai_completions_http" {
 
   action {
     type             = "forward"
-    target_group_arn = aws_lb_target_group.tg_3000.arn
+    target_group_arn = aws_lb_target_group.tg_4000.arn
   }
 
   condition {
@@ -519,6 +526,7 @@ resource "aws_lb_listener_rule" "openai_completions_http" {
 }
 
 # ChatCompletions for HTTP
+# Routed straight to LiteLLM (tg_4000) -- see openai_completions above.
 resource "aws_lb_listener_rule" "chat_completions_http" {
   count        = var.use_cloudfront ? 1 : 0
   listener_arn = aws_lb_listener.http.arn
@@ -526,7 +534,7 @@ resource "aws_lb_listener_rule" "chat_completions_http" {
 
   action {
     type             = "forward"
-    target_group_arn = aws_lb_target_group.tg_3000.arn
+    target_group_arn = aws_lb_target_group.tg_4000.arn
   }
 
   condition {
