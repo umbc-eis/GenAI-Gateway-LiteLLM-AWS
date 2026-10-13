@@ -77,6 +77,15 @@ resource "aws_db_parameter_group" "example_pg" {
     name  = "rds.log_retention_period"
     value = "1440"
   }
+
+  # Per-operation sort/hash memory, in kB. The 4 MB default made the Usage page's
+  # GROUPING SETS aggregation over LiteLLM_DailyUserSpend spill ~240 MB to temp files
+  # on a 7-day range (measured 2026-10-13). Only large sorts use this much; ordinary
+  # proxy queries stay well under it.
+  parameter {
+    name  = "work_mem"
+    value = "65536"
+  }
 }
 
 # Database #1: litellm
