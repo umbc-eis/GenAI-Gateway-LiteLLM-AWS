@@ -38,6 +38,8 @@ terraform init -backend-config=backend.hcl
 
 export TF_VAR_vpc_id=$VPC_ID
 export TF_VAR_key_pair_name=$EC2_KEY_PAIR_NAME
+# Comma-separated CIDRs allowed to SSH in. Empty opens no SSH; use SSM Session Manager.
+export TF_VAR_ssh_allowed_cidrs="$(python3 -c 'import json,sys; print(json.dumps([c.strip() for c in sys.argv[1].split(",") if c.strip()]))' "${EC2_SSH_ALLOWED_CIDRS:-}")"
 
 terraform apply -auto-approve
 echo "deployed"

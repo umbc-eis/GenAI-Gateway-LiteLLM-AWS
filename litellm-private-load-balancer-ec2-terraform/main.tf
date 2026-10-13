@@ -40,12 +40,18 @@ resource "aws_security_group" "linux_sg" {
   description = "Security group for Linux EC2 instance"
   vpc_id      = data.aws_vpc.imported_vpc.id
 
-  # Allow SSH inbound
-  ingress {
-    from_port   = 22
-    to_port     = 22
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"] # Consider restricting to specific IPs in production
+  # SSH inbound only from ranges the operator lists explicitly. The default is none,
+  # so the instance is reachable through SSM Session Manager alone (the role below
+  # grants it) until someone adds a range. Never 0.0.0.0/0.
+  dynamic "ingress" {
+    for_each = length(var.ssh_allowed_cidrs) > 0 ? [1] : []
+    content {
+      description = "SSH from operator-approved ranges"
+      from_port   = 22
+      to_port     = 22
+      protocol    = "tcp"
+      cidr_blocks = var.ssh_allowed_cidrs
+    }
   }
 
   # Allow all outbound traffic
