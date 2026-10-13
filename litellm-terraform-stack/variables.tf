@@ -284,9 +284,9 @@ variable "memory_target_utilization_percent" {
 }
 
 variable "alb_requests_per_target" {
-  description = "Target average ALB requests per ECS task per minute for autoscaling (ALBRequestCountPerTarget). Tune from the ALB RequestCount metric."
+  description = "Target average ALB requests per ECS task per minute for autoscaling (ALBRequestCountPerTarget). Tune from the ALB RequestCount metric for the target group carrying chat traffic."
   type    = number
-  default = 300
+  default = 100
 }
 
 variable "vcpus" {
