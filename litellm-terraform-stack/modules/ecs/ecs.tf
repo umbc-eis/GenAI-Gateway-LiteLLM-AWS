@@ -250,6 +250,15 @@ resource "aws_ecs_service" "litellm_service" {
     type = "ECS"
   }
 
+  # Stop a rollout whose tasks keep failing and return to the last deployment that
+  # reached steady state, instead of retrying the broken revision indefinitely.
+  # minimumHealthyPercent stays at the ECS default of 100, so the old tasks keep serving
+  # until replacements pass health checks.
+  deployment_circuit_breaker {
+    enable   = true
+    rollback = true
+  }
+
   # desired_count is managed by aws_appautoscaling_target (ecs:service:DesiredCount).
   # Without this, every `terraform apply` resets the service back to
   # var.desired_capacity, overriding whatever the autoscaler has chosen.
