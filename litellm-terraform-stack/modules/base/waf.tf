@@ -16,6 +16,68 @@ resource "aws_wafv2_web_acl" "litellm_waf" {
     sampled_requests_enabled   = true
   }
 
+  # Throttle model listing per source IP. In September-October 2026 a few external IPs
+  # sent tens of thousands of /v1/models requests a day, each with a different invalid
+  # key. Every attempt wrote a row to LiteLLM_DailyUserSpend (and siblings), which grew
+  # the Usage page's 7-day query to 1.1M result rows and crashed it.
+  #
+  # The limit was set from two weeks of WAF logs: legitimate callers sit far below it,
+  # and the key-guessing traffic ran hundreds of times above it. Only /models requests
+  # are blocked, so an IP over the limit keeps working for chat and embeddings.
+  rule {
+    name     = "RateLimit-ModelsList"
+    priority = 0
+
+    action {
+      block {}
+    }
+
+    statement {
+      rate_based_statement {
+        limit                 = 100
+        evaluation_window_sec = 300
+        aggregate_key_type    = "IP"
+
+        scope_down_statement {
+          or_statement {
+            statement {
+              byte_match_statement {
+                search_string         = "/v1/models"
+                positional_constraint = "STARTS_WITH"
+                field_to_match {
+                  uri_path {}
+                }
+                text_transformation {
+                  priority = 0
+                  type     = "LOWERCASE"
+                }
+              }
+            }
+            statement {
+              byte_match_statement {
+                search_string         = "/models"
+                positional_constraint = "STARTS_WITH"
+                field_to_match {
+                  uri_path {}
+                }
+                text_transformation {
+                  priority = 0
+                  type     = "LOWERCASE"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    visibility_config {
+      cloudwatch_metrics_enabled = true
+      metric_name                = "LiteLLMRateLimitModelsList"
+      sampled_requests_enabled   = true
+    }
+  }
+
   rule {
     name     = "AWSManagedRulesCommonRuleSet-Exclusions"
     priority = 1

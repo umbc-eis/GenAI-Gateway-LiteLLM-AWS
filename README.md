@@ -405,6 +405,20 @@ quotas](https://docs.aws.amazon.com/general/latest/gr/aws-general.pdf#aws-servic
 
 Please find detailed guidance deployment and usage instructions in the Implementation Guide [here](https://aws-solutions-library-samples.github.io/ai-ml/guidance-for-multi-provider-generative-ai-gateway-on-aws.html )
 
+### Operating this fork
+
+The guide above covers a fresh install. This deployment also carries state that a
+clone does not reproduce — `.env` is gitignored, and some settings live in the
+database rather than `config/config.yaml`.
+
+- **[OPERATIONS.md](OPERATIONS.md)** — settings held outside the repo (including
+  `disable_env_credential_login`), production sizing, and cleaning up junk rows in the
+  daily spend tables.
+- **[UPGRADING.md](UPGRADING.md)** — changing the pinned LiteLLM version. Use
+  `./upgrade-litellm.sh`, not `./deploy.sh`: the latter is the install path and
+  rebuilds the middleware image unconditionally, shipping an undeclared change
+  alongside a version bump.
+
 ## Workshop
 
 Follow the step-by-step instructions provided in this [workshop](https://catalog.us-east-1.prod.workshops.aws/workshops/db0f23ea-2442-4962-9a54-04dcdab7de59/en-US) for a deep dive hands-on experience.

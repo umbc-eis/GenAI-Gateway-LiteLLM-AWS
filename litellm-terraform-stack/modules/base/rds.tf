@@ -53,16 +53,38 @@ resource "aws_db_parameter_group" "example_pg" {
   # Update the family to match your PostgreSQL version
   family = "postgres15"
 
-  # Enable logging of all statements
+  # Log schema changes only. This was "all", which logged every query the proxy ran:
+  # on 2026-09-30 that produced a single 2.29 GB log file and drove free storage on the
+  # 20 GB volume from 4.46 GB to 1.54 GB, tripping RDS's "will run out of storage"
+  # alarm. Postgres logs share the data volume, so query logging competes with the
+  # spend-log retention this deployment needs. "all" also wrote prompt-bearing query
+  # text to the log.
   parameter {
     name  = "log_statement"
-    value = "all"
+    value = "ddl"
   }
 
-  # Log statements that take longer than 1ms
+  # Log statements slower than 1s. Was "1" (1ms), which logged essentially every
+  # statement and made this a second copy of log_statement = all.
   parameter {
     name  = "log_min_duration_statement"
-    value = "1"
+    value = "1000"
+  }
+
+  # Keep 1 day of logs on the instance instead of the 3-day RDS default, so a noisy
+  # period cannot stack up multiple days of logs against the data volume.
+  parameter {
+    name  = "rds.log_retention_period"
+    value = "1440"
+  }
+
+  # Per-operation sort/hash memory, in kB. The 4 MB default made the Usage page's
+  # GROUPING SETS aggregation over LiteLLM_DailyUserSpend spill ~240 MB to temp files
+  # on a 7-day range (measured 2026-10-13). Only large sorts use this much; ordinary
+  # proxy queries stay well under it.
+  parameter {
+    name  = "work_mem"
+    value = "65536"
   }
 }
 
