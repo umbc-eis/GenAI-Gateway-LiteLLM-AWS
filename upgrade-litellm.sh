@@ -20,8 +20,9 @@
 #     tasks racing deadlocked production on the v1.101.0 -> v1.103.2 upgrade
 #     (Postgres 40P01), marking a migration failed and blocking the rest
 #   * asserts the terraform plan touches only the task definition and service
-#   * watches the rollout and prints the rollback command, because the ECS deployment
-#     circuit breaker is disabled on this service (no automatic revert)
+#   * watches the rollout and prints the rollback command. The ECS deployment circuit
+#     breaker reverts a rollout whose tasks keep failing, but not one that comes up
+#     healthy and misbehaves
 #
 # Requires: aws, docker, terraform, python3, jq. See UPGRADING.md and OPERATIONS.md.
 
@@ -246,7 +247,7 @@ fi
 note "Plan"
 info "$DEPLOYED_VERSION  ->  $TARGET_VERSION"
 info "$PENDING_COUNT migrations will be applied from a single task before the service rolls"
-info "ECS circuit breaker is disabled on this service: no automatic rollback"
+info "ECS circuit breaker reverts a rollout whose tasks keep failing; anything subtler is manual"
 if ! $ASSUME_YES; then
     printf '\n    Proceed? [y/N] '
     read -r reply
@@ -385,14 +386,20 @@ source "$REPO_ROOT/tf-env.sh" >/dev/null
     || die "tf-env.sh resolved $TF_VAR_litellm_version, expected $TARGET_VERSION"
 
 PLAN="$(mktemp -t litellm-upgrade-plan)"
+# The rendered plan carries secret variable values; mktemp creates it 0600.
+PLAN_JSON="$(mktemp -t litellm-upgrade-plan-json)"
+trap 'rm -f "$PLAN" "$PLAN_JSON"' EXIT
 ( cd litellm-terraform-stack && terraform plan -input=false -lock-timeout=120s -out="$PLAN" >/dev/null )
+( cd litellm-terraform-stack && terraform show -json "$PLAN" ) > "$PLAN_JSON"
 
 # Refuse to apply anything beyond the task definition and service. A version bump has
-# no business touching RDS, the ALB, or Redis.
-( cd litellm-terraform-stack && terraform show -json "$PLAN" ) | python3 - "$TARGET_VERSION" <<'PY'
+# no business touching RDS, the ALB, or Redis. The plan goes in by path, not on stdin:
+# the heredoc below is python's stdin, so a pipe into `python3 -` would be discarded.
+python3 - "$TARGET_VERSION" "$PLAN_JSON" <<'PY'
 import json, sys, re
-plan = json.load(sys.stdin)
 target = sys.argv[1]
+with open(sys.argv[2]) as f:
+    plan = json.load(f)
 changes = [c for c in plan.get("resource_changes", []) if c["change"]["actions"] != ["no-op"]]
 allowed = ("aws_ecs_task_definition", "aws_ecs_service")
 bad = [c["address"] for c in changes if c["type"] not in allowed]
@@ -414,7 +421,7 @@ print(f"    verified: new task definition uses litellm:{target}")
 PY
 
 ( cd litellm-terraform-stack && terraform apply -input=false -auto-approve -lock-timeout=120s "$PLAN" >/dev/null )
-rm -f "$PLAN"
+rm -f "$PLAN" "$PLAN_JSON"
 info "applied"
 
 # ---------------------------------------------------------------- roll out
@@ -453,4 +460,4 @@ note "Done: $DEPLOYED_VERSION -> $TARGET_VERSION"
 info "snapshot : $SNAP"
 info "rollback : aws ecs update-service --cluster $CLUSTER --service $SERVICE --task-definition ${TASK_DEF_ARN##*/}"
 info "Migrations are forward-only; rolling the image back does not undo them."
-info "Watch for a few minutes: this service has no deployment circuit breaker."
+info "Watch for a few minutes: the circuit breaker only catches tasks that fail to start."
