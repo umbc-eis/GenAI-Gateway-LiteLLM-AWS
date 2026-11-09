@@ -2,9 +2,10 @@
 # Change the pinned LiteLLM version on an existing ECS deployment.
 #
 #   ./upgrade-litellm.sh --check                 # resolve the target, report drift, exit
-#   ./upgrade-litellm.sh --to v1.103.2           # full upgrade to an explicit version
-#   ./upgrade-litellm.sh --to main-stable        # resolve main-stable to its version first
-#   ./upgrade-litellm.sh --to v1.103.2 --yes     # skip the confirmation prompt
+#   ./upgrade-litellm.sh --to v1.108.3           # full upgrade to an explicit version
+#   ./upgrade-litellm.sh --to lts                # resolve lts (the default) to its version first
+#   ./upgrade-litellm.sh --to main-stable        # same, for the main-stable channel
+#   ./upgrade-litellm.sh --to v1.108.3 --yes     # skip the confirmation prompt
 #
 # Use this instead of ./deploy.sh for a version bump. deploy.sh is the install /
 # full-reconcile path: it rebuilds and pushes middleware:latest unconditionally (even
@@ -12,7 +13,7 @@
 # via yq, and applies the log-bucket stack. None of that belongs in a version change.
 #
 # What this does that a runbook cannot do reliably:
-#   * resolves main-stable by registry digest, never by tag name
+#   * resolves lts / main-stable by registry digest, never by tag name
 #   * refuses a target whose image lacks the architecture the task definition runs
 #   * diffs the migrations bundled in the deployed image against the target image
 #   * applies migrations from ONE task before the service rolls, which is the whole
@@ -133,7 +134,16 @@ fi
 
 note "Resolving target version"
 
-[ -n "$TARGET" ] || TARGET="main-stable"
+# Upstream runs an LTS line (1.108 onwards); lts and main-stable are separate channels.
+[ -n "$TARGET" ] || TARGET="lts"
+# vX.Y.Z-lts is an alias with the same digest as vX.Y.Z. Pin the plain version so the ECR
+# tag, the in-image version check and the snapshot name all agree.
+if [[ "$TARGET" =~ ^(v[0-9]+\.[0-9]+\.[0-9]+)-lts$ ]]; then
+    info "'$TARGET' is the LTS alias of ${BASH_REMATCH[1]}; pinning ${BASH_REMATCH[1]}"
+    [ "$(ghcr_digest "$TARGET")" = "$(ghcr_digest "${BASH_REMATCH[1]}")" ] \
+        || die "$TARGET and ${BASH_REMATCH[1]} have different digests -- refusing to guess"
+    TARGET="${BASH_REMATCH[1]}"
+fi
 
 TARGET_DIGEST="$(ghcr_digest "$TARGET")"
 [ -n "$TARGET_DIGEST" ] || die "tag '$TARGET' not found in ghcr.io/${GHCR_REPO}"
@@ -149,21 +159,27 @@ else
     while read -r cand; do
         [ -n "$cand" ] || continue
         if [ "$(ghcr_digest "$cand")" = "$TARGET_DIGEST" ]; then TARGET_VERSION="$cand"; break; fi
-    done < <(curl -fsSL "https://api.github.com/repos/BerriAI/litellm/releases?per_page=30" \
+    # per_page=100: dev/rc prereleases now outnumber stable ones in the recent window.
+    done < <(curl -fsSL "https://api.github.com/repos/BerriAI/litellm/releases?per_page=100" \
              | jq -r '.[] | select(.prerelease==false and .draft==false) | .tag_name')
     [ -n "$TARGET_VERSION" ] || die "could not match '$TARGET' ($TARGET_DIGEST) to a published release"
 fi
 
-STABLE_DIGEST="$(ghcr_digest main-stable || true)"
 info "target version : $TARGET_VERSION"
 info "target digest  : $TARGET_DIGEST"
-if [ -n "$STABLE_DIGEST" ]; then
-    if [ "$STABLE_DIGEST" = "$TARGET_DIGEST" ]; then
-        info "main-stable    : matches this target"
+# Report where each upstream channel points. Warn only when the target is on neither:
+# since the LTS line started, lts and main-stable legitimately diverge.
+ON_CHANNEL=false
+for ch in lts main-stable; do
+    ch_digest="$(ghcr_digest "$ch" || true)"
+    [ -n "$ch_digest" ] || continue
+    if [ "$ch_digest" = "$TARGET_DIGEST" ]; then
+        info "$(printf '%-14s' "$ch"): matches this target"; ON_CHANNEL=true
     else
-        warn "main-stable points elsewhere ($STABLE_DIGEST) -- $TARGET_VERSION is not the current production release."
+        info "$(printf '%-14s' "$ch"): points elsewhere ($ch_digest)"
     fi
-fi
+done
+$ON_CHANNEL || warn "$TARGET_VERSION is not what lts or main-stable currently points at."
 
 PLATFORMS="$(ghcr_platforms "$TARGET_VERSION")"
 echo "$PLATFORMS" | grep -qx "$DOCKER_PLATFORM" \
@@ -196,6 +212,11 @@ docker pull --quiet --platform "$DOCKER_PLATFORM" "ghcr.io/${GHCR_REPO}:${TARGET
 
 OLD_MIGS="$(list_migrations "$DEPLOYED_IMAGE")"
 NEW_MIGS="$(list_migrations "ghcr.io/${GHCR_REPO}:${TARGET_VERSION}")"
+# An empty listing means MIG_DIR moved (e.g. a Python minor bump in the image), not that
+# there is nothing to apply. Treating it as "0 new" would skip the single-task migration
+# and let every task race `prisma migrate deploy` at boot -- the 40P01 deadlock again.
+[ -n "$OLD_MIGS" ] || die "no migrations found at $MIG_DIR in $DEPLOYED_IMAGE -- has the path changed?"
+[ -n "$NEW_MIGS" ] || die "no migrations found at $MIG_DIR in $TARGET_VERSION -- has the path changed? (also update MIG_CMD)"
 PENDING="$(comm -13 <(echo "$OLD_MIGS") <(echo "$NEW_MIGS"))"
 PENDING_COUNT="$(echo "$PENDING" | grep -c . || true)"
 
