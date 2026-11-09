@@ -243,7 +243,9 @@ v1.106.6 → v1.108.3, so the v1.106 items were live from 2026-10-29:
   middleware does not read either field.
 - OpenRouter models were removed from the built-in cost map.
 
-Router settings stored in the database (run through the one-off task above):
+`scripts/check-db-settings.sh` checks the stored settings for string fallback targets,
+plus failed migrations and invalid indexes, from a one-off task (read-only, prints no
+secrets). Run it before an upgrade. The underlying query:
 
 ```sql
 select param_name, param_value from "LiteLLM_Config"
