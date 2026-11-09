@@ -6,7 +6,8 @@
 #   * fallback settings stored in LiteLLM_Config (STORE_MODEL_IN_DB). Since v1.108.1 a
 #     fallback target written as a string stops the proxy at startup.
 #   * enforce_fallback_model_access and cache_params.max_messages, if set
-#   * failed / rolled-back Prisma migrations, which block every migration after them
+#   * unresolved failed Prisma migrations, which block every migration after them, and
+#     rolled-back attempts with whether they were since re-applied
 #   * INVALID indexes left by an interrupted CREATE INDEX CONCURRENTLY
 #
 # Registers a temporary task definition (litellm-migrate-admin), runs it once, and
@@ -72,10 +73,19 @@ async def main():
         if r["param_name"] == "litellm_settings" and isinstance(v.get("cache_params"), dict):
             print("CHECK cache_params.max_messages =", v["cache_params"].get("max_messages", "<unset>"))
     print("CHECK string fallback targets:", json.dumps(problems) if problems else "none")
-    bad = await db.query_raw(
-        "select migration_name, finished_at, rolled_back_at from _prisma_migrations "
-        "where finished_at is null or rolled_back_at is not null")
-    print("CHECK failed/rolled-back migrations:", json.dumps(bad, default=str))
+    # Prisma keeps the row of a rolled-back attempt alongside the row of the re-apply, so
+    # historical rollbacks are reported separately from migrations that never finished.
+    # Only the latter block `prisma migrate deploy` (P3009).
+    unresolved = await db.query_raw(
+        "select m.migration_name, m.started_at from _prisma_migrations m "
+        "where m.finished_at is null and m.rolled_back_at is null")
+    print("CHECK unresolved failed migrations:", json.dumps(unresolved, default=str))
+    history = await db.query_raw(
+        "select m.migration_name, m.rolled_back_at, exists(select 1 from _prisma_migrations o "
+        "where o.migration_name = m.migration_name and o.finished_at is not null "
+        "and o.rolled_back_at is null) as reapplied "
+        "from _prisma_migrations m where m.rolled_back_at is not null")
+    print("CHECK rolled-back attempts (reapplied=true is history):", json.dumps(history, default=str))
     inv = await db.query_raw(
         "select c.relname from pg_class c join pg_index i on i.indexrelid=c.oid where i.indisvalid=false")
     print("CHECK invalid indexes:", json.dumps(inv))
