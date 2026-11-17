@@ -2,10 +2,10 @@
 # Change the pinned LiteLLM version on an existing ECS deployment.
 #
 #   ./upgrade-litellm.sh --check                 # resolve the target, report drift, exit
-#   ./upgrade-litellm.sh --to v1.108.3           # full upgrade to an explicit version
+#   ./upgrade-litellm.sh --to v1.108.10          # full upgrade to an explicit version
 #   ./upgrade-litellm.sh --to lts                # resolve lts (the default) to its version first
 #   ./upgrade-litellm.sh --to main-stable        # same, for the main-stable channel
-#   ./upgrade-litellm.sh --to v1.108.3 --yes     # skip the confirmation prompt
+#   ./upgrade-litellm.sh --to v1.108.10 --yes    # skip the confirmation prompt
 #
 # Use this instead of ./deploy.sh for a version bump. deploy.sh is the install /
 # full-reconcile path: it rebuilds and pushes middleware:latest unconditionally (even

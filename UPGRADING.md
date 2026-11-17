@@ -6,7 +6,7 @@ only thing that changes between upgrades is the target.
 ```bash
 ./upgrade-litellm.sh --check               # resolve the target, report drift, change nothing
 ./upgrade-litellm.sh --to lts              # resolve lts to a version, then upgrade (default)
-./upgrade-litellm.sh --to v1.108.3         # upgrade to an explicit version
+./upgrade-litellm.sh --to v1.108.10        # upgrade to an explicit version
 ```
 
 Always run `--check` first. It is read-only and prints the target, the architecture
@@ -243,6 +243,10 @@ v1.106.6 → v1.108.3, so the v1.106 items were live from 2026-10-29:
   middleware does not read either field.
 - OpenRouter models were removed from the built-in cost map.
 
+Production went v1.108.3 → v1.108.10 (LTS) on 2026-11-17 (task definition `:34`,
+snapshot `litellm-db-pre-v1-108-10-20261117-091143`). LTS patches only; no new
+migrations (220 → 220) and the pre-upgrade database check was clean.
+
 `scripts/check-db-settings.sh` checks the stored settings for string fallback targets,
 plus failed migrations and invalid indexes, from a one-off task (read-only, prints no
 secrets). Run it before an upgrade. The underlying query:
@@ -257,7 +261,7 @@ where param_name in ('router_settings', 'litellm_settings', 'general_settings');
 - Only the LiteLLM image is handled. The middleware image is unchanged and still
   deploys as `middleware:latest`, which is not pinned.
 - ECS only. The EKS path in the stack is untouched.
-- The migrations path is hardcoded to `python3.13` (still correct on v1.108.3). The
+- The migrations path is hardcoded to `python3.13` (still correct on v1.108.10). The
   script now aborts if either image lists no migrations there, rather than treating
   that as "nothing to apply".
 - The migration task runs the target image's `prisma migrate deploy`. It does not
