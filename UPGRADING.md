@@ -151,9 +151,11 @@ where finished_at is null or rolled_back_at is not null;
 
 ## Rollback
 
-There is **no automatic rollback** — the ECS deployment circuit breaker is disabled
-(`enable: false, rollback: false`) with `minimumHealthyPercent: 100`. Failing tasks are
-retried, not reverted. Watch the rollout.
+The ECS deployment circuit breaker is enabled with rollback (since the v1.105.1
+upgrade, 2026-10-16), and `minimumHealthyPercent` is 100. A rollout whose tasks keep
+failing to start or pass health checks is stopped and reverted to the last steady
+deployment automatically. A rollout that comes up healthy but misbehaves is not, so
+watch it and revert by hand.
 
 To revert the application:
 
@@ -180,10 +182,20 @@ means repointing `DATABASE_URL`, and spend logs written after the snapshot are l
 - No invalid indexes (query above)
 - `FreeStorageSpace` — new indexes consume space, and storage autoscaling is off
 
-Expect some benign new log noise on v1.103.x: `Auto-router baseline observation could
+Expect some benign log noise since v1.103.x: `Auto-router baseline observation could
 not be initialized` (a swallowed exception on an optional feature) and
 `_acount_pre_call_check_tokens: failed to count tokens` alongside Bedrock `CountTokens`
 400s for models that do not support that API.
+
+Behaviour changes that arrived with v1.104/v1.105 and apply here:
+
+- Over-budget requests return **422**, not 429 (`budget_exceeded_status_code` in
+  `litellm_settings` restores 429). Accepted as-is on 2026-10-16.
+- A failed boot migration now stops the task (exit 1) instead of serving on a stale
+  schema (`ENFORCE_PRISMA_MIGRATION_CHECK`, default true).
+- The proxy refuses to start on an unset, empty or `sk-1234` master key.
+- Password logins are screened against haveibeenpwned (fails open); a breached or
+  admin-set password restricts that session to `/ui/change-password`.
 
 ## Known gaps
 
